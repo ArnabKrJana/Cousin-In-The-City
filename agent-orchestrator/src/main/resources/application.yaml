@@ -1,35 +1,41 @@
 spring:
   application:
     name: agent-orchestrator
-  
-  # The database and Redis connections will be auto-configured by spring-boot-docker-compose
-  # because of the compose.yaml file in the root directory!
+
+  docker:
+    compose:
+      file: ../compose.yaml
+      lifecycle-management: start-only # Ensure it doesn't shut down DBs for other modules
+
+  # Postgres Connection
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vector_db?timezone=Asia/Kolkata
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
 
   ai:
     ollama:
-      # If not auto-configured, this points to local Ollama
       base-url: http://localhost:11434
       chat:
         options:
-          # You can change this to llama3, qwen, or whichever you pulled locally
           model: gemma4:e2b
       embedding:
         options:
           model: nomic-embed-text:latest
+
     chat:
       memory:
         repository:
           jdbc:
             initialize-schema: always
+
     vectorstore:
       pgvector:
         initialize-schema: true
         dimensions: 768
         index-type: HNSW
 
-server:
-  port: 8080
-
 logging:
   level:
-    org.springframework.ai: DEBUG
+    org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: DEBUG

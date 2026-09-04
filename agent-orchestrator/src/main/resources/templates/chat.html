@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>CousinInTheCity - Relocation AI</title>
+    <!-- Tailwind CSS for beautiful styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Custom scrollbar for chat window */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .markdown-body ul { list-style-type: disc; margin-left: 1.5rem; }
+        .markdown-body ol { list-style-type: decimal; margin-left: 1.5rem; }
+        .markdown-body strong { font-weight: 600; color: #1e293b; }
+        .markdown-body a { color: #2563eb; text-decoration: underline; }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-white text-indigo-600 font-bold w-10 h-10 rounded-full flex items-center justify-center text-xl">
+                C
+            </div>
+            <div>
+                <h1 class="text-xl font-bold">CousinInTheCity AI</h1>
+                <p class="text-xs text-indigo-200">Your trusted local relative</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span class="text-sm font-medium">Orchestrator Online</span>
+        </div>
+    </header>
+
+    <!-- Chat Container -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
+        <div class="w-full max-w-4xl flex flex-col gap-6" id="chat-messages">
+            
+            <!-- AI Welcome Message -->
+            <div class="flex gap-4 items-start">
+                <div class="bg-indigo-100 text-indigo-600 font-bold w-10 h-10 rounded-full flex shrink-0 items-center justify-center">
+                    AI
+                </div>
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[85%]">
+                    <p class="text-slate-800">
+                        Hey cousin! So you're relocating? Don't worry, I've got your back. I can help you with:
+                        <ul class="list-disc ml-5 mt-2 text-slate-600 text-sm">
+                            <li>Finding flights</li>
+                            <li>Searching for affordable PGs near your office</li>
+                            <li>Budgeting and cost of living estimations</li>
+                            <li>Local transit routing (Metro, Trains, Autos)</li>
+                        </ul>
+                        <br>Where are you moving to?
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Loading Indicator (Hidden by default) -->
+    <div id="loading-indicator" class="hidden justify-center items-center pb-4">
+        <div class="bg-white px-6 py-2 rounded-full shadow border flex items-center gap-3">
+            <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm font-medium text-slate-600">The Orchestrator is calling tools...</span>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <footer class="bg-white border-t border-slate-200 p-4 shrink-0">
+        <div class="max-w-4xl mx-auto relative flex items-center">
+            <textarea id="prompt-input" rows="1" 
+                class="w-full bg-slate-100 border-none rounded-3xl pl-6 pr-16 py-4 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all resize-none overflow-hidden" 
+                placeholder="Ask me about flights, PGs, or local travel..."></textarea>
+            
+            <button id="send-button" onclick="sendMessage()" 
+                class="absolute right-2 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full transition-transform transform active:scale-95 disabled:opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                </svg>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-resize textarea
+        const textarea = document.getElementById('prompt-input');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.scrollHeight > 150) this.style.overflowY = 'auto';
+        });
+
+        // Handle Enter key (Shift+Enter for new line)
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function appendUserMessage(text) {
+            const chatBox = document.getElementById('chat-messages');
+            const msgHtml = `
+                <div class="flex gap-4 items-start justify-end">
+                    <div class="bg-indigo-600 p-4 rounded-2xl rounded-tr-none shadow-sm max-w-[85%]">
+                        <p class="text-white whitespace-pre-wrap">${text}</p>
+                    </div>
+                    <div class="bg-slate-200 text-slate-600 font-bold w-10 h-10 rounded-full flex shrink-0 items-center justify-center">
+                        U
+                    </div>
+                </div>
+            `;
+            chatBox.insertAdjacentHTML('beforeend', msgHtml);
+            scrollToBottom();
+        }
+
+        function appendAIMessage(markdownText) {
+            const chatBox = document.getElementById('chat-messages');
+            // Parse markdown using marked.js
+            const htmlContent = marked.parse(markdownText);
+            
+            const msgHtml = `
+                <div class="flex gap-4 items-start">
+                    <div class="bg-indigo-100 text-indigo-600 font-bold w-10 h-10 rounded-full flex shrink-0 items-center justify-center">
+                        AI
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[85%]">
+                        <div class="markdown-body text-slate-800 space-y-2 text-sm md:text-base leading-relaxed">
+                            ${htmlContent}
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatBox.insertAdjacentHTML('beforeend', msgHtml);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const main = document.querySelector('main');
+            main.scrollTo({ top: main.scrollHeight, behavior: 'smooth' });
+        }
+
+        async function sendMessage() {
+            const inputEl = document.getElementById('prompt-input');
+            const prompt = inputEl.value.trim();
+            if (!prompt) return;
+
+            // 1. Show user message
+            appendUserMessage(prompt);
+            
+            // 2. Reset input and show loading
+            inputEl.value = '';
+            inputEl.style.height = 'auto';
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            document.getElementById('loading-indicator').classList.add('flex');
+            document.getElementById('send-button').disabled = true;
+            scrollToBottom();
+
+            try {
+                // 3. Call Agent Orchestrator API
+                // Our agent expects Input { prompt: String }
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Server Error");
+                }
+
+                const data = await response.json();
+                
+                // 4. Hide loading and show AI message
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('loading-indicator').classList.remove('flex');
+                document.getElementById('send-button').disabled = false;
+                
+                appendAIMessage(data.content);
+                
+            } catch (error) {
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('loading-indicator').classList.remove('flex');
+                document.getElementById('send-button').disabled = false;
+                appendAIMessage("⚠️ *Oops! The Orchestrator encountered an error.* Make sure Ollama and all MCP Microservices are running.");
+            }
+        }
+    </script>
+</body>
+</html>
