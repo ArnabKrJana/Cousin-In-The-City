@@ -1,6 +1,7 @@
 package com.oneforth.cousininthecitybackend.config
 
 import com.oneforth.cousininthecitybackend.service.AccommodationAgentService
+import com.oneforth.cousininthecitybackend.service.FinanceAgentService
 import com.oneforth.cousininthecitybackend.service.TravelAgentService
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.context.annotation.Bean
@@ -13,7 +14,8 @@ class AiConfig {
     fun chatClient(
         builder: ChatClient.Builder,
         travelAgentService: TravelAgentService,
-        accommodationAgentService: AccommodationAgentService
+        accommodationAgentService: AccommodationAgentService,
+        financeAgentService: FinanceAgentService
     ): ChatClient {
         return builder
             .defaultSystem(
@@ -25,7 +27,7 @@ class AiConfig {
                 trusted advice to their younger sibling.
                 """.trimIndent()
             )
-            .defaultTools(travelAgentService, accommodationAgentService)
+            .defaultTools(travelAgentService, accommodationAgentService, financeAgentService)
             .build()
     }
 }
