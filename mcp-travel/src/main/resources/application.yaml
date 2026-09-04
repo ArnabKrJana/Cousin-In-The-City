@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: mcp-travel
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: INFO
+    com.oneforth.mcptravel: DEBUG
