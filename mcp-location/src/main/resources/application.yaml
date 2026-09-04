@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: mcp-location
+
+server:
+  port: 8084
+
+logging:
+  level:
+    root: INFO
+    com.oneforth.mcplocation: DEBUG

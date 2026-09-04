@@ -27,6 +27,10 @@
 - Dynamically calculates rent and artificially spikes commute costs if the user chooses a residential tier far from their office tier, solving the real-world problem of "cheap rent vs expensive commute."
 - Tags recommendations as "Over Budget," "Tight," or "Comfortable" to inform the AI's downstream logic.
 
+### 5. `mcp-location` (Local Transit Tool Server)
+- Exposed the `/api/location/transit-route` API.
+- Developed a **Transit Routing Engine** that accurately maps city-specific transport cultures (e.g., Local Trains in Mumbai, Namma Metro in Bangalore, DMRC in Delhi).
+- Dynamically compares a cheap Public Transit multi-leg route (e.g., Auto -> Train) against an expensive Alternative Route (e.g., Uber/Cab), providing step-by-step instructions and cost estimations for the AI to present to the user.
+
 ## Next Steps
-- Implement `mcp-location` (Local transit and commute logic).
 - Build the Android Native (Jetpack Compose) frontend to consume the Orchestrator's APIs.

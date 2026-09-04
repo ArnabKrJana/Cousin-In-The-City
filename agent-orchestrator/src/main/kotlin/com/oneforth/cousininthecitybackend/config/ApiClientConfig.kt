@@ -34,4 +34,12 @@ class ApiClientConfig {
         val factory = HttpServiceProxyFactory.builderFor(adaptor).build()
         return factory.createClient(com.oneforth.cousininthecitybackend.client.FinanceApiClient::class.java)
     }
+
+    @Bean
+    fun locationApiClient(): com.oneforth.cousininthecitybackend.client.LocationApiClient {
+        val restClient = RestClient.builder().baseUrl("http://localhost:8084").build()
+        val adaptor = RestClientAdapter.create(restClient)
+        val factory = HttpServiceProxyFactory.builderFor(adaptor).build()
+        return factory.createClient(com.oneforth.cousininthecitybackend.client.LocationApiClient::class.java)
+    }
 }
