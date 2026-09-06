@@ -1,0 +1,1520 @@
+
+
+
+========================================================================================================================
+FILE: compose.yaml
+========================================================================================================================
+
+services:
+  pgvector:
+    image: 'pgvector/pgvector:pg16'
+    environment:
+      - 'POSTGRES_DB=vector_db'
+      - 'POSTGRES_PASSWORD=password'
+      - 'POSTGRES_USER=postgres'
+    labels:
+      - "org.springframework.boot.service-connection=postgres"
+    ports:
+      - '5432:5432'
+  redis:
+    image: 'redis:latest'
+    ports:
+      - '6379:6379'
+
+
+========================================================================================================================
+FILE: settings.gradle.kts
+========================================================================================================================
+
+rootProject.name = "CousinInTheCity-Backend"
+
+include("agent-orchestrator")
+include("mcp-travel")
+include("mcp-accommodation")
+include("mcp-finance")
+include("mcp-location")
+include("mcp-notifications")
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\build.gradle.kts
+========================================================================================================================
+
+plugins {
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+    kotlin("plugin.jpa")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+extra["springAiVersion"] = "2.0.1"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
+dependencies {
+    // Web & Core
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    // Database & Caching
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    runtimeOnly("org.postgresql:postgresql")
+
+    // Spring AI
+    implementation("org.springframework.ai:spring-ai-starter-model-ollama")
+    implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
+
+    implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc")
+
+    // Docker Compose
+    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
+    developmentOnly("org.springframework.ai:spring-ai-spring-boot-docker-compose")
+
+    // Testing
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-redis-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+    }
+}
+
+allOpen {
+    annotation("jakarta.persistence.Entity")
+    annotation("jakarta.persistence.MappedSuperclass")
+    annotation("jakarta.persistence.Embeddable")
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\CousinInTheCityBackendApplication.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+
+@SpringBootApplication
+class CousinInTheCityBackendApplication
+
+fun main(args: Array<String>) {
+    runApplication<CousinInTheCityBackendApplication>(*args)
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\client\AccommodationApiClient.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.client
+
+import com.oneforth.cousininthecitybackend.model.dtos.AccommodationResponse
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.service.annotation.GetExchange
+
+interface AccommodationApiClient {
+    @GetExchange("/api/accommodation/search")
+    fun searchAccommodation(
+        @RequestParam("officeLocation") officeLocation: String
+    ): List<AccommodationResponse>
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\client\FinanceApiClient.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.client
+
+import com.oneforth.cousininthecitybackend.model.dtos.FinanceEstimateResponse
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.service.annotation.GetExchange
+
+interface FinanceApiClient {
+    @GetExchange("/api/finance/neighborhood-budget")
+    fun getNeighborhoodBudget(
+        @RequestParam("city") city: String,
+        @RequestParam("officeNeighborhood") officeNeighborhood: String,
+        @RequestParam("monthlyIncomeInr") monthlyIncomeInr: Int
+    ): FinanceEstimateResponse
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\client\LocationApiClient.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.client
+
+import com.oneforth.cousininthecitybackend.model.dtos.TransitRouteResponse
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.service.annotation.GetExchange
+
+interface LocationApiClient {
+    @GetExchange("/api/location/transit-route")
+    fun getTransitRoute(
+        @RequestParam("city") city: String,
+        @RequestParam("originArea") originArea: String,
+        @RequestParam("destinationArea") destinationArea: String
+    ): TransitRouteResponse
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\client\TravelApiClient.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.client
+
+import com.oneforth.cousininthecitybackend.model.dtos.FlightResponse
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.service.annotation.GetExchange
+
+interface TravelApiClient {
+    @GetExchange("/api/flights/search")
+    fun searchFlights(
+        @RequestParam("origin") origin: String,
+        @RequestParam("destination") destination: String
+    ): List<FlightResponse>
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\config\AiConfig.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.config
+
+import com.oneforth.cousininthecitybackend.service.AccommodationAgentService
+import com.oneforth.cousininthecitybackend.service.FinanceAgentService
+import com.oneforth.cousininthecitybackend.service.LocationAgentService
+import com.oneforth.cousininthecitybackend.service.TravelAgentService
+import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.chat.memory.ChatMemory
+import org.springframework.ai.chat.memory.MessageWindowChatMemory
+import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
+
+@Configuration
+class AiConfig {
+
+    @Bean
+    fun providesMessageWindowChatMemory(jdbcChatMemoryRepository: JdbcChatMemoryRepository): MessageWindowChatMemory {
+        val maxMessage = 100
+        return MessageWindowChatMemory.builder()
+            .chatMemoryRepository(jdbcChatMemoryRepository)
+            .maxMessages(maxMessage)
+            .build()
+    }
+
+    @Primary
+    @Bean
+    fun providesChatMemory(messageWindowChatMemory: MessageWindowChatMemory): ChatMemory {
+        return messageWindowChatMemory
+    }
+
+    @Bean
+    fun chatClient(
+        builder: ChatClient.Builder,
+        travelAgentService: TravelAgentService,
+        accommodationAgentService: AccommodationAgentService,
+        financeAgentService: FinanceAgentService,
+        locationAgentService: LocationAgentService
+    ): ChatClient {
+        return builder
+            .defaultSystem(
+                """
+                You are a friendly, helpful, and highly knowledgeable local relative known as 'CousinInTheCity'. 
+                You live in the city the user is relocating to, and your goal is to help them with insider advice 
+                on travel, accommodation, budgeting, and local commute. 
+                Always maintain a warm, welcoming, and slightly informal tone, like an older cousin giving 
+                trusted advice to their younger sibling.
+                
+                CRITICAL INSTRUCTION:
+                You have access to specialized tools (Travel, Accommodation, Finance, Location).
+                YOU MUST ALWAYS USE THESE TOOLS to fetch data before answering. 
+                DO NOT GUESS flights, rent prices, or transit routes. 
+                If the user asks for flights, you MUST call the travel tool.
+                If the user asks for budgeting/neighborhoods, you MUST call the finance tool.
+                If the user asks for accommodation/PGs, you MUST call the accommodation tool.
+                If the user asks for a commute route, you MUST call the location tool.
+                Do not provide generic advice if a tool can provide specific data.
+                """.trimIndent()
+            )
+            .defaultTools(travelAgentService, accommodationAgentService, financeAgentService, locationAgentService)
+            .build()
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\config\ApiClientConfig.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.config
+
+import com.oneforth.cousininthecitybackend.client.AccommodationApiClient
+import com.oneforth.cousininthecitybackend.client.TravelApiClient
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.web.client.RestClient
+import org.springframework.web.client.support.RestClientAdapter
+import org.springframework.web.service.invoker.HttpServiceProxyFactory
+
+@Configuration
+class ApiClientConfig {
+
+    @Bean
+    fun travelApiClient(): TravelApiClient {
+        val restClient = RestClient.builder().baseUrl("http://localhost:8081").build()
+        val adaptor = RestClientAdapter.create(restClient)
+        val factory = HttpServiceProxyFactory.builderFor(adaptor).build()
+        return factory.createClient(TravelApiClient::class.java)
+    }
+
+    @Bean
+    fun accommodationApiClient(): AccommodationApiClient {
+        val restClient = RestClient.builder().baseUrl("http://localhost:8082").build()
+        val adaptor = RestClientAdapter.create(restClient)
+        val factory = HttpServiceProxyFactory.builderFor(adaptor).build()
+        return factory.createClient(AccommodationApiClient::class.java)
+    }
+
+    @Bean
+    fun financeApiClient(): com.oneforth.cousininthecitybackend.client.FinanceApiClient {
+        val restClient = RestClient.builder().baseUrl("http://localhost:8083").build()
+        val adaptor = RestClientAdapter.create(restClient)
+        val factory = HttpServiceProxyFactory.builderFor(adaptor).build()
+        return factory.createClient(com.oneforth.cousininthecitybackend.client.FinanceApiClient::class.java)
+    }
+
+    @Bean
+    fun locationApiClient(): com.oneforth.cousininthecitybackend.client.LocationApiClient {
+        val restClient = RestClient.builder().baseUrl("http://localhost:8084").build()
+        val adaptor = RestClientAdapter.create(restClient)
+        val factory = HttpServiceProxyFactory.builderFor(adaptor).build()
+        return factory.createClient(com.oneforth.cousininthecitybackend.client.LocationApiClient::class.java)
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\controller\ChatController.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.controller
+
+import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
+import org.springframework.ai.chat.memory.ChatMemory
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
+
+@RestController
+@RequestMapping("/api/chat")
+class ChatController(
+    chatClientBuilder: ChatClient.Builder,
+    chatMemory: ChatMemory
+) {
+
+    data class ChatInput(val prompt: String, val conversationId: String = "default-user")
+    data class ChatOutput(val content: String)
+
+    private val chatClient: ChatClient = chatClientBuilder.build()
+    private val memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build()
+
+    @PostMapping
+    fun chat(@RequestBody input: ChatInput): ChatOutput {
+        val response = chatClient.prompt()
+            .user(input.prompt)
+            .advisors(memoryAdvisor)
+            .advisors { a -> 
+                a.param("chat_memory_conversation_id", input.conversationId) 
+            }
+            .call()
+            .content() ?: "I'm sorry, I couldn't process that."
+            
+        return ChatOutput(response)
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\controller\ChatWebController.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.controller
+
+import org.springframework.stereotype.Controller
+import org.springframework.web.bind.annotation.GetMapping
+
+@Controller
+class ChatWebController {
+
+    @GetMapping("/")
+    fun chatPage(): String {
+        return "chat"
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\model\dtos\AccommodationDtos.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.model.dtos
+
+data class AccommodationResponse(
+    val name: String,
+    val type: String,
+    val rentInr: Int,
+    val distanceToOfficeMeters: Int,
+    val mapLink: String
+)
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\model\dtos\FinanceDtos.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.model.dtos
+
+data class NeighborhoodTier(
+    val tierName: String,
+    val exampleAreas: List<String>,
+    val estimatedRentInr: Int,
+    val estimatedCommuteCostInr: Int,
+    val totalEstimatedLivingCostInr: Int,
+    val affordabilityStatus: String
+)
+
+data class FinanceEstimateResponse(
+    val city: String,
+    val officeNeighborhood: String,
+    val monthlyIncomeInr: Int,
+    val tiers: List<NeighborhoodTier>
+)
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\model\dtos\LocationDtos.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.model.dtos
+
+data class RouteOption(
+    val primaryMode: String,
+    val estimatedTimeMinutes: Int,
+    val estimatedCostInr: Int,
+    val stepByStepInstructions: List<String>
+)
+
+data class TransitRouteResponse(
+    val city: String,
+    val originArea: String,
+    val destinationArea: String,
+    val cityTransportSystems: List<String>,
+    val recommendedRoute: RouteOption,
+    val alternativeRoute: RouteOption
+)
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\model\dtos\TravelDtos.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.model.dtos
+
+data class FlightResponse(
+    val flightNumber: String,
+    val airline: String,
+    val origin: String,
+    val destination: String,
+    val departureTime: String,
+    val arrivalTime: String,
+    val priceInr: Int
+)
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\service\AccommodationAgentService.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.service
+
+import com.oneforth.cousininthecitybackend.client.AccommodationApiClient
+import com.oneforth.cousininthecitybackend.model.dtos.AccommodationResponse
+import org.springframework.ai.tool.annotation.Tool
+import org.springframework.stereotype.Service
+
+@Service
+class AccommodationAgentService(private val client: AccommodationApiClient) {
+
+    @Tool(description = "Search for PG, hostels, or apartments near a specific office location")
+    fun searchAccommodation(officeLocation: String): List<AccommodationResponse> {
+        return try {
+            client.searchAccommodation(officeLocation)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\service\FinanceAgentService.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.service
+
+import com.oneforth.cousininthecitybackend.client.FinanceApiClient
+import com.oneforth.cousininthecitybackend.model.dtos.FinanceEstimateResponse
+import org.springframework.ai.tool.annotation.Tool
+import org.springframework.stereotype.Service
+
+@Service
+class FinanceAgentService(private val client: FinanceApiClient) {
+
+    @Tool(description = "Calculate living and commute budget across different neighborhood tiers to find affordable areas.")
+    fun getNeighborhoodBudget(city: String, officeNeighborhood: String, monthlyIncomeInr: Int): FinanceEstimateResponse? {
+        return try {
+            client.getNeighborhoodBudget(city, officeNeighborhood, monthlyIncomeInr)
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\service\LocationAgentService.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.service
+
+import com.oneforth.cousininthecitybackend.client.LocationApiClient
+import com.oneforth.cousininthecitybackend.model.dtos.TransitRouteResponse
+import org.springframework.ai.tool.annotation.Tool
+import org.springframework.stereotype.Service
+
+@Service
+class LocationAgentService(private val client: LocationApiClient) {
+
+    @Tool(description = "Get step-by-step local transit routing and commute estimations between two areas in a city.")
+    fun getTransitRoute(city: String, originArea: String, destinationArea: String): TransitRouteResponse? {
+        return try {
+            client.getTransitRoute(city, originArea, destinationArea)
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\kotlin\com\oneforth\cousininthecitybackend\service\TravelAgentService.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend.service
+
+import com.oneforth.cousininthecitybackend.client.TravelApiClient
+import com.oneforth.cousininthecitybackend.model.dtos.FlightResponse
+import org.springframework.ai.tool.annotation.Tool
+import org.springframework.stereotype.Service
+
+@Service
+class TravelAgentService(private val client: TravelApiClient) {
+
+    @Tool(description = "Search for available domestic flights between two cities")
+    fun searchFlights(origin: String, destination: String): List<FlightResponse> {
+        return try {
+            client.searchFlights(origin, destination)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+}
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\main\resources\application.yaml
+========================================================================================================================
+
+spring:
+  application:
+    name: agent-orchestrator
+
+  docker:
+    compose:
+      file: ../compose.yaml
+      lifecycle-management: start-only # Ensure it doesn't shut down DBs for other modules
+
+  # Postgres Connection
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vector_db?timezone=Asia/Kolkata
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: llama3.2
+      embedding:
+        options:
+          model: nomic-embed-text:latest
+
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always
+
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        dimensions: 768
+        index-type: HNSW
+
+logging:
+  level:
+    org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: DEBUG
+
+
+
+========================================================================================================================
+FILE: agent-orchestrator\src\test\kotlin\com\oneforth\cousininthecitybackend\CousinInTheCityBackendApplicationTests.kt
+========================================================================================================================
+
+package com.oneforth.cousininthecitybackend
+
+import org.junit.jupiter.api.Test
+import org.springframework.boot.test.context.SpringBootTest
+
+@SpringBootTest
+class CousinInTheCityBackendApplicationTests {
+
+    @Test
+    fun contextLoads() {
+    }
+
+}
+
+
+
+========================================================================================================================
+FILE: gradle\wrapper\gradle-wrapper.properties
+========================================================================================================================
+
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.1-bin.zip
+networkTimeout=10000
+retries=0
+retryBackOffMs=500
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+
+
+
+========================================================================================================================
+FILE: mcp-accommodation\build.gradle.kts
+========================================================================================================================
+
+plugins {
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+extra["springAiVersion"] = "2.0.1"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-accommodation\src\main\kotlin\com\oneforth\mcpaccommodation\McpAccommodationApplication.kt
+========================================================================================================================
+
+package com.oneforth.mcpaccommodation
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
+import org.springframework.web.client.RestClient
+
+@SpringBootApplication
+class McpAccommodationApplication {
+    @Bean
+    fun restClient(): RestClient {
+        return RestClient.create()
+    }
+}
+
+fun main(args: Array<String>) {
+    runApplication<McpAccommodationApplication>(*args)
+}
+
+
+
+========================================================================================================================
+FILE: mcp-accommodation\src\main\kotlin\com\oneforth\mcpaccommodation\model\dtos\AccommodationDtos.kt
+========================================================================================================================
+
+package com.oneforth.mcpaccommodation.model.dtos
+
+data class AccommodationResponse(
+    val name: String,
+    val type: String,
+    val rentInr: Int,
+    val distanceToOfficeMeters: Int,
+    val mapLink: String
+)
+
+
+
+========================================================================================================================
+FILE: mcp-accommodation\src\main\kotlin\com\oneforth\mcpaccommodation\service\AccommodationService.kt
+========================================================================================================================
+
+package com.oneforth.mcpaccommodation.service
+
+import com.oneforth.mcpaccommodation.model.dtos.AccommodationResponse
+import org.springframework.stereotype.Service
+import org.springframework.web.client.RestClient
+import kotlin.random.Random
+
+@Service
+class AccommodationService(private val restClient: RestClient) {
+
+    data class NominatimResponse(val lat: String, val lon: String, val display_name: String)
+
+    private val pgBrands = listOf("ZoloStays", "Stanza Living", "CoLive", "Local PG", "YourSpace")
+    private val pgSuffixes = listOf("Heights", "Residency", "Homes", "Enclave")
+
+    fun searchAccommodation(officeLocation: String): List<AccommodationResponse> {
+        // 1. Hit the real OpenStreetMap API to get exact coordinates of the office
+        val nominatimResults = try {
+            restClient.get()
+                .uri { uriBuilder ->
+                    uriBuilder.scheme("https")
+                        .host("nominatim.openstreetmap.org")
+                        .path("/search")
+                        .queryParam("q", officeLocation)
+                        .queryParam("format", "json")
+                        .queryParam("limit", 1)
+                        .build()
+                }
+                .header("User-Agent", "CousinInTheCityApp/1.0")
+                .retrieve()
+                .body(Array<NominatimResponse>::class.java)
+        } catch (e: Exception) {
+            null
+        }
+
+        // Default to center of India if API fails
+        val lat = nominatimResults?.firstOrNull()?.lat?.toDoubleOrNull() ?: 20.5937
+        val lon = nominatimResults?.firstOrNull()?.lon?.toDoubleOrNull() ?: 78.9629
+
+        val accommodations = mutableListOf<AccommodationResponse>()
+        val numResults = Random.nextInt(3, 6)
+
+        for (i in 1..numResults) {
+            val brand = pgBrands.random()
+            val suffix = pgSuffixes.random()
+            val type = if (Random.nextBoolean()) "Single Room" else "Double Sharing"
+            val distance = Random.nextInt(500, 5000) // 500m to 5km from office
+            val rent = if (type == "Single Room") Random.nextInt(12000, 25000) else Random.nextInt(6000, 11000)
+
+            // Randomize lat/lon slightly to put the PG near the office
+            val pgLat = lat + (Random.nextDouble(-0.02, 0.02))
+            val pgLon = lon + (Random.nextDouble(-0.02, 0.02))
+
+            // Create a real, clickable OpenStreetMap link!
+            val mapLink = "https://www.openstreetmap.org/?mlat=$pgLat&mlon=$pgLon#map=17/$pgLat/$pgLon"
+
+            accommodations.add(
+                AccommodationResponse(
+                    name = "$brand $suffix",
+                    type = type,
+                    rentInr = rent,
+                    distanceToOfficeMeters = distance,
+                    mapLink = mapLink
+                )
+            )
+        }
+
+        return accommodations.sortedBy { it.distanceToOfficeMeters }
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-accommodation\src\main\kotlin\com\oneforth\mcpaccommodation\tool\AccommodationController.kt
+========================================================================================================================
+
+package com.oneforth.mcpaccommodation.tool
+
+import com.oneforth.mcpaccommodation.model.dtos.AccommodationResponse
+import com.oneforth.mcpaccommodation.service.AccommodationService
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+@RequestMapping("/api/accommodation")
+class AccommodationController(private val accommodationService: AccommodationService) {
+
+    @GetMapping("/search")
+    fun searchAccommodation(
+        @RequestParam officeLocation: String
+    ): List<AccommodationResponse> {
+        return accommodationService.searchAccommodation(officeLocation)
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-accommodation\src\main\resources\application.yaml
+========================================================================================================================
+
+spring:
+  application:
+    name: mcp-accommodation
+
+server:
+  port: 8082
+
+logging:
+  level:
+    root: INFO
+    com.oneforth.mcpaccommodation: DEBUG
+
+
+
+========================================================================================================================
+FILE: mcp-finance\build.gradle.kts
+========================================================================================================================
+
+plugins {
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+extra["springAiVersion"] = "2.0.1"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-finance\src\main\kotlin\com\oneforth\mcpfinance\McpFinanceApplication.kt
+========================================================================================================================
+
+package com.oneforth.mcpfinance
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+
+@SpringBootApplication
+class McpFinanceApplication
+
+fun main(args: Array<String>) {
+    runApplication<McpFinanceApplication>(*args)
+}
+
+
+
+========================================================================================================================
+FILE: mcp-finance\src\main\kotlin\com\oneforth\mcpfinance\model\dtos\FinanceDtos.kt
+========================================================================================================================
+
+package com.oneforth.mcpfinance.model.dtos
+
+data class NeighborhoodTier(
+    val tierName: String,
+    val exampleAreas: List<String>,
+    val estimatedRentInr: Int,
+    val estimatedCommuteCostInr: Int,
+    val totalEstimatedLivingCostInr: Int,
+    val affordabilityStatus: String
+)
+
+data class FinanceEstimateResponse(
+    val city: String,
+    val officeNeighborhood: String,
+    val monthlyIncomeInr: Int,
+    val tiers: List<NeighborhoodTier>
+)
+
+
+
+========================================================================================================================
+FILE: mcp-finance\src\main\kotlin\com\oneforth\mcpfinance\service\FinanceService.kt
+========================================================================================================================
+
+package com.oneforth.mcpfinance.service
+
+import com.oneforth.mcpfinance.model.dtos.FinanceEstimateResponse
+import com.oneforth.mcpfinance.model.dtos.NeighborhoodTier
+import org.springframework.stereotype.Service
+import kotlin.math.abs
+
+@Service
+class FinanceService {
+
+    // Mock Database of cities and their tiers
+    private val cityData = mapOf(
+        "MUMBAI" to mapOf(
+            "Premium" to listOf("Bandra", "Juhu", "South Bombay"),
+            "Standard" to listOf("Andheri", "Goregaon", "Malad"),
+            "Affordable" to listOf("Thane", "Navi Mumbai", "Borivali")
+        ),
+        "BANGALORE" to mapOf(
+            "Premium" to listOf("Koramangala", "Indiranagar", "CBD"),
+            "Standard" to listOf("Whitefield", "HSR Layout", "Marathahalli"),
+            "Affordable" to listOf("Electronic City", "Yelahanka", "Kengeri")
+        ),
+        "DELHI" to mapOf(
+            "Premium" to listOf("South Extension", "Vasant Vihar", "Def Col"),
+            "Standard" to listOf("Lajpat Nagar", "Hauz Khas", "Rajouri Garden"),
+            "Affordable" to listOf("Rohini", "Dwarka", "Uttam Nagar")
+        )
+    )
+
+    private val baseRent = mapOf(
+        "Premium" to 45000,
+        "Standard" to 25000,
+        "Affordable" to 12000
+    )
+
+    fun calculateBudget(city: String, officeNeighborhood: String, monthlyIncomeInr: Int): FinanceEstimateResponse {
+        val normalizedCity = city.uppercase()
+        val neighborhoods = cityData[normalizedCity] ?: cityData["BANGALORE"]!! // Default to Bangalore if unknown
+
+        // Determine which tier the office is in (default to Standard)
+        var officeTierIndex = 1 
+        if (neighborhoods["Premium"]?.any { it.equals(officeNeighborhood, ignoreCase = true) } == true) officeTierIndex = 0
+        if (neighborhoods["Affordable"]?.any { it.equals(officeNeighborhood, ignoreCase = true) } == true) officeTierIndex = 2
+
+        val tiers = mutableListOf<NeighborhoodTier>()
+
+        val tierNames = listOf("Premium", "Standard", "Affordable")
+        
+        for ((index, tierName) in tierNames.withIndex()) {
+            val areas = neighborhoods[tierName] ?: emptyList()
+            
+            // Rent Calculation
+            // Add a small city multiplier (Mumbai +20%)
+            val cityMultiplier = if (normalizedCity == "MUMBAI") 1.2 else 1.0
+            val estimatedRent = (baseRent[tierName]!! * cityMultiplier).toInt()
+
+            // Commute Trade-off Analyzer
+            // The further the housing tier is from the office tier, the higher the commute cost
+            val distanceFactor = abs(officeTierIndex - index)
+            val baseCommuteCost = 2000
+            val estimatedCommuteCost = baseCommuteCost + (distanceFactor * 4000)
+
+            // Other living costs (food, utilities) usually scale slightly with the tier
+            val foodAndUtilities = 10000 + ((2 - index) * 3000)
+            
+            val totalCost = estimatedRent + estimatedCommuteCost + foodAndUtilities
+
+            // Affordability Status
+            val status = when {
+                totalCost > monthlyIncomeInr -> "Over Budget"
+                (monthlyIncomeInr - totalCost) < 5000 -> "Tight"
+                else -> "Comfortable"
+            }
+
+            tiers.add(
+                NeighborhoodTier(
+                    tierName = tierName,
+                    exampleAreas = areas,
+                    estimatedRentInr = estimatedRent,
+                    estimatedCommuteCostInr = estimatedCommuteCost,
+                    totalEstimatedLivingCostInr = totalCost,
+                    affordabilityStatus = status
+                )
+            )
+        }
+
+        return FinanceEstimateResponse(
+            city = city,
+            officeNeighborhood = officeNeighborhood,
+            monthlyIncomeInr = monthlyIncomeInr,
+            tiers = tiers
+        )
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-finance\src\main\kotlin\com\oneforth\mcpfinance\tool\FinanceController.kt
+========================================================================================================================
+
+package com.oneforth.mcpfinance.tool
+
+import com.oneforth.mcpfinance.model.dtos.FinanceEstimateResponse
+import com.oneforth.mcpfinance.service.FinanceService
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+@RequestMapping("/api/finance")
+class FinanceController(private val financeService: FinanceService) {
+
+    @GetMapping("/neighborhood-budget")
+    fun getNeighborhoodBudget(
+        @RequestParam city: String,
+        @RequestParam officeNeighborhood: String,
+        @RequestParam monthlyIncomeInr: Int
+    ): FinanceEstimateResponse {
+        return financeService.calculateBudget(city, officeNeighborhood, monthlyIncomeInr)
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-finance\src\main\resources\application.yaml
+========================================================================================================================
+
+spring:
+  application:
+    name: mcp-finance
+
+server:
+  port: 8083
+
+logging:
+  level:
+    root: INFO
+    com.oneforth.mcpfinance: DEBUG
+
+
+
+========================================================================================================================
+FILE: mcp-location\build.gradle.kts
+========================================================================================================================
+
+plugins {
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+extra["springAiVersion"] = "2.0.1"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-location\src\main\kotlin\com\oneforth\mcplocation\McpLocationApplication.kt
+========================================================================================================================
+
+package com.oneforth.mcplocation
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+
+@SpringBootApplication
+class McpLocationApplication
+
+fun main(args: Array<String>) {
+    runApplication<McpLocationApplication>(*args)
+}
+
+
+
+========================================================================================================================
+FILE: mcp-location\src\main\kotlin\com\oneforth\mcplocation\model\dtos\LocationDtos.kt
+========================================================================================================================
+
+package com.oneforth.mcplocation.model.dtos
+
+data class RouteOption(
+    val primaryMode: String,
+    val estimatedTimeMinutes: Int,
+    val estimatedCostInr: Int,
+    val stepByStepInstructions: List<String>
+)
+
+data class TransitRouteResponse(
+    val city: String,
+    val originArea: String,
+    val destinationArea: String,
+    val cityTransportSystems: List<String>,
+    val recommendedRoute: RouteOption,
+    val alternativeRoute: RouteOption
+)
+
+
+
+========================================================================================================================
+FILE: mcp-location\src\main\kotlin\com\oneforth\mcplocation\service\TransitService.kt
+========================================================================================================================
+
+package com.oneforth.mcplocation.service
+
+import com.oneforth.mcplocation.model.dtos.RouteOption
+import com.oneforth.mcplocation.model.dtos.TransitRouteResponse
+import org.springframework.stereotype.Service
+import kotlin.random.Random
+
+@Service
+class TransitService {
+
+    private val cityTransportData = mapOf(
+        "MUMBAI" to listOf("Local Trains", "BEST Buses", "Auto Rickshaws", "Metro"),
+        "BANGALORE" to listOf("Namma Metro", "BMTC Volvo Buses", "Auto/Rapido"),
+        "DELHI" to listOf("DMRC Metro", "DTC Buses", "E-Rickshaws")
+    )
+
+    fun getTransitRoute(city: String, originArea: String, destinationArea: String): TransitRouteResponse {
+        val normalizedCity = city.uppercase()
+        val systems = cityTransportData[normalizedCity] ?: listOf("Buses", "Taxis", "Auto Rickshaws")
+
+        val recommendedRoute = generateRecommendedRoute(normalizedCity, originArea, destinationArea, systems)
+        val alternativeRoute = generateAlternativeRoute(originArea, destinationArea)
+
+        return TransitRouteResponse(
+            city = city,
+            originArea = originArea,
+            destinationArea = destinationArea,
+            cityTransportSystems = systems,
+            recommendedRoute = recommendedRoute,
+            alternativeRoute = alternativeRoute
+        )
+    }
+
+    private fun generateRecommendedRoute(city: String, origin: String, dest: String, systems: List<String>): RouteOption {
+        val time = Random.nextInt(35, 75)
+        val cost = Random.nextInt(20, 60)
+
+        val mode = when (city) {
+            "MUMBAI" -> "Auto + Local Train"
+            "BANGALORE" -> "Rapido + Namma Metro"
+            "DELHI" -> "E-Rickshaw + DMRC Metro"
+            else -> "Bus + Walk"
+        }
+
+        val instructions = when (city) {
+            "MUMBAI" -> listOf(
+                "Take a shared auto from $origin to the nearest local train station.",
+                "Board a Fast/Slow local train heading towards $dest.",
+                "Alight at the station closest to $dest and walk for 5 mins."
+            )
+            "BANGALORE" -> listOf(
+                "Book a Rapido bike or Auto to the nearest Purple/Green line Metro station.",
+                "Take the Namma Metro towards the $dest station.",
+                "Exit the station and walk 10 mins to the office."
+            )
+            "DELHI" -> listOf(
+                "Take an E-Rickshaw to the nearest DMRC Metro station.",
+                "Board the metro on the appropriate color line to $dest.",
+                "Exit at $dest gate and walk 2 mins."
+            )
+            else -> listOf(
+                "Take a local city bus from $origin.",
+                "Drop at $dest bus stop.",
+                "Walk to your destination."
+            )
+        }
+
+        return RouteOption(
+            primaryMode = mode,
+            estimatedTimeMinutes = time,
+            estimatedCostInr = cost,
+            stepByStepInstructions = instructions
+        )
+    }
+
+    private fun generateAlternativeRoute(origin: String, dest: String): RouteOption {
+        // Cab/Uber is always the expensive, potentially slower alternative due to traffic
+        val time = Random.nextInt(55, 120)
+        val cost = Random.nextInt(350, 750)
+
+        return RouteOption(
+            primaryMode = "Uber / Ola Cab",
+            estimatedTimeMinutes = time,
+            estimatedCostInr = cost,
+            stepByStepInstructions = listOf(
+                "Book an Uber/Ola from your location at $origin.",
+                "Sit in traffic.",
+                "Arrive directly at the office in $dest."
+            )
+        )
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-location\src\main\kotlin\com\oneforth\mcplocation\tool\LocationController.kt
+========================================================================================================================
+
+package com.oneforth.mcplocation.tool
+
+import com.oneforth.mcplocation.model.dtos.TransitRouteResponse
+import com.oneforth.mcplocation.service.TransitService
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+@RequestMapping("/api/location")
+class LocationController(private val transitService: TransitService) {
+
+    @GetMapping("/transit-route")
+    fun getTransitRoute(
+        @RequestParam city: String,
+        @RequestParam originArea: String,
+        @RequestParam destinationArea: String
+    ): TransitRouteResponse {
+        return transitService.getTransitRoute(city, originArea, destinationArea)
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-location\src\main\resources\application.yaml
+========================================================================================================================
+
+spring:
+  application:
+    name: mcp-location
+
+server:
+  port: 8084
+
+logging:
+  level:
+    root: INFO
+    com.oneforth.mcplocation: DEBUG
+
+
+
+========================================================================================================================
+FILE: mcp-travel\build.gradle.kts
+========================================================================================================================
+
+plugins {
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+extra["springAiVersion"] = "2.0.1"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-travel\src\main\kotlin\com\oneforth\mcptravel\McpTravelApplication.kt
+========================================================================================================================
+
+package com.oneforth.mcptravel
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+
+@SpringBootApplication
+class McpTravelApplication
+
+fun main(args: Array<String>) {
+    runApplication<McpTravelApplication>(*args)
+}
+
+
+
+========================================================================================================================
+FILE: mcp-travel\src\main\kotlin\com\oneforth\mcptravel\model\dtos\TravelDtos.kt
+========================================================================================================================
+
+package com.oneforth.mcptravel.model.dtos
+
+data class FlightResponse(
+    val flightNumber: String,
+    val airline: String,
+    val origin: String,
+    val destination: String,
+    val departureTime: String,
+    val arrivalTime: String,
+    val priceInr: Int
+)
+
+
+
+========================================================================================================================
+FILE: mcp-travel\src\main\kotlin\com\oneforth\mcptravel\service\FlightService.kt
+========================================================================================================================
+
+package com.oneforth.mcptravel.service
+
+import com.oneforth.mcptravel.model.dtos.FlightResponse
+import org.springframework.stereotype.Service
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.random.Random
+
+@Service
+class FlightService {
+
+    private val airlines = listOf("Indigo", "Air India", "Vistara", "SpiceJet", "Akasa Air")
+    private val timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+
+    fun searchFlights(origin: String, destination: String): List<FlightResponse> {
+        val numFlights = Random.nextInt(3, 7) // Generate 3 to 6 random flights
+        val flights = mutableListOf<FlightResponse>()
+        
+        val baseTime = LocalDateTime.now().plusDays(Random.nextLong(1, 14)) // Random day in the next two weeks
+
+        for (i in 1..numFlights) {
+            val airline = airlines.random()
+            val flightNum = "${airline.substring(0, 2).uppercase()}-${Random.nextInt(100, 999)}"
+            val price = Random.nextInt(3500, 12000) // Realistic domestic prices
+            
+            // Randomize departure time
+            val departure = baseTime.plusHours(Random.nextLong(1, 12)).plusMinutes(Random.nextLong(0, 59))
+            // Assume 2 to 3 hour flight duration
+            val arrival = departure.plusHours(Random.nextLong(2, 3)).plusMinutes(Random.nextLong(10, 50))
+
+            flights.add(
+                FlightResponse(
+                    flightNumber = flightNum,
+                    airline = airline,
+                    origin = origin.uppercase(),
+                    destination = destination.uppercase(),
+                    departureTime = departure.format(timeFormatter),
+                    arrivalTime = arrival.format(timeFormatter),
+                    priceInr = price
+                )
+            )
+        }
+        
+        // Sort by price (cheapest first)
+        return flights.sortedBy { it.priceInr }
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-travel\src\main\kotlin\com\oneforth\mcptravel\tool\FlightController.kt
+========================================================================================================================
+
+package com.oneforth.mcptravel.tool
+
+import com.oneforth.mcptravel.model.dtos.FlightResponse
+import com.oneforth.mcptravel.service.FlightService
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+@RequestMapping("/api/flights")
+class FlightController(private val flightService: FlightService) {
+
+    @GetMapping("/search")
+    fun searchFlights(
+        @RequestParam origin: String,
+        @RequestParam destination: String
+    ): List<FlightResponse> {
+        return flightService.searchFlights(origin, destination)
+    }
+}
+
+
+
+========================================================================================================================
+FILE: mcp-travel\src\main\resources\application.yaml
+========================================================================================================================
+
+spring:
+  application:
+    name: mcp-travel
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: INFO
+    com.oneforth.mcptravel: DEBUG
+
+

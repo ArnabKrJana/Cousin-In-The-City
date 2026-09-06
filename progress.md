@@ -32,5 +32,12 @@
 - Developed a **Transit Routing Engine** that accurately maps city-specific transport cultures (e.g., Local Trains in Mumbai, Namma Metro in Bangalore, DMRC in Delhi).
 - Dynamically compares a cheap Public Transit multi-leg route (e.g., Auto -> Train) against an expensive Alternative Route (e.g., Uber/Cab), providing step-by-step instructions and cost estimations for the AI to present to the user.
 
+## Critical Architectural Bug Fixes (The Tool-Calling Breakthrough)
+During testing, the AI model initially failed to execute the Multi-Agent tools. We successfully diagnosed and resolved four critical system design bugs:
+1. **The Kotlin `arg0` Reflection Bug**: Kotlin compiles parameter names into generic `arg0`, `arg1`, stripping them from the Spring AI Tool schemas. We injected the `-java-parameters` compiler argument in Gradle and performed a clean build so the AI could accurately understand the tool parameters.
+2. **The Clean Architecture Dependency Bug**: The `ChatController` was incorrectly instantiating a raw, empty `ChatClient.Builder`, completely bypassing the tools and system prompts configured in our `AiConfig` `@Bean`. We refactored the controller to properly inject the configured `ChatClient`.
+3. **The Poisoned JDBC Memory Bug**: After early hallucination failures, massive 4000-token hallucinated logs were stored in PostgreSQL. These were recursively injected into the prompt, overflowing the 4096 context limit instantly. We implemented dynamic Session IDs in the UI to ensure clean memory contexts.
+4. **Model Capability Upgrade**: Small 2B parameter models (`gemma`) lack the reasoning capacity to choose between 4 complex microservices simultaneously. We migrated the Orchestrator to Meta's officially supported **`llama3.2:3b`** model with `temperature: 0.1` to ensure strict, deterministic tool routing within a 4GB VRAM constraint.
+
 ## Next Steps
 - Build the Android Native (Jetpack Compose) frontend to consume the Orchestrator's APIs.

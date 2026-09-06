@@ -153,6 +153,9 @@
             main.scrollTo({ top: main.scrollHeight, behavior: 'smooth' });
         }
 
+        // Generate a random session ID so memory isn't corrupted by old errors
+        const sessionId = Math.random().toString(36).substring(2, 15);
+
         async function sendMessage() {
             const inputEl = document.getElementById('prompt-input');
             const prompt = inputEl.value.trim();
@@ -171,11 +174,10 @@
 
             try {
                 // 3. Call Agent Orchestrator API
-                // Our agent expects Input { prompt: String }
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt })
+                    body: JSON.stringify({ prompt: prompt, conversationId: sessionId })
                 });
 
                 if (!response.ok) {

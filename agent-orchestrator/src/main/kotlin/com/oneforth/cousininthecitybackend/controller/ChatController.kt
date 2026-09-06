@@ -12,14 +12,13 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/chat")
 class ChatController(
-    chatClientBuilder: ChatClient.Builder,
+    private val chatClient: ChatClient,
     chatMemory: ChatMemory
 ) {
 
     data class ChatInput(val prompt: String, val conversationId: String = "default-user")
     data class ChatOutput(val content: String)
 
-    private val chatClient: ChatClient = chatClientBuilder.build()
     private val memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build()
 
     @PostMapping
