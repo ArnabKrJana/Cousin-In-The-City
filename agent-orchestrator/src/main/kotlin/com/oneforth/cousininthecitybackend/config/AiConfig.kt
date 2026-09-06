@@ -62,6 +62,18 @@ class AiConfig {
                 - If the user asks about time (e.g. "tomorrow"), you MUST call the time tool to get today's date first.
                 - If the user asks about culture, broker fees, local rules, or weather, you MUST call the KnowledgeBase tool.
                 Do not provide generic advice if a tool can provide specific data.
+                
+                ANDROID AUTOMATION INSTRUCTION:
+                If you have successfully finalized a travel plan or itinerary, you MUST append a strict JSON block at the very end of your response. 
+                This JSON will be intercepted by the Android App to trigger hardware Intents (Calendar, Keep).
+                Format the JSON exactly like this, enclosed in ```json ... ```:
+                ```json
+                {
+                  "intent": "CALENDAR",
+                  "title": "Flight to Mumbai",
+                  "date": "2026-10-12"
+                }
+                ```
                 """.trimIndent()
             )
             .defaultTools(travelAgentService, accommodationAgentService, financeAgentService, locationAgentService, timeAgentService, knowledgeAgentService)
