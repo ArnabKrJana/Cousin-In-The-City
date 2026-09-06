@@ -8,8 +8,11 @@
 ## Completed Modules
 
 ### 1. `agent-orchestrator` (The AI Brain)
-- Configured Spring AI `ChatClient` with the local **Ollama (`gemma4:e2b`)** model.
+- Configured Spring AI `ChatClient` with the local **Ollama (`llama3.2:3b`)** model.
 - Connected **PostgreSQL (pgvector)** via JDBC Chat Memory so the AI remembers the conversation context.
+- Implemented a frontend-driven dynamic `sessionId` generation in `chat.html` to guarantee thread-isolated memory inside PostgreSQL.
+- Developed a **RAG KnowledgeBase Pipeline** (`KnowledgeAgentService`) to ingest unstructured text guides into `pgvector` and expose semantic search to the AI using `Top-K` filtering.
+- Implemented a **Time Engine** (`TimeAgentService`) giving the AI real-world clock awareness for relative queries (e.g. "tomorrow").
 - Registered AI tools (`@Tool`) pointing to the domain microservices via `HttpServiceProxyFactory`.
 
 ### 2. `mcp-travel` (Travel Tool Server)
