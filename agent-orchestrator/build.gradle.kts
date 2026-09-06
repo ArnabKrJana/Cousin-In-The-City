@@ -38,6 +38,7 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
 
     implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
 
     // Docker Compose
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
