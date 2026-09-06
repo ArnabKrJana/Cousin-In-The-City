@@ -14,6 +14,7 @@
 - Developed a **RAG KnowledgeBase Pipeline** (`KnowledgeAgentService`) to ingest unstructured text guides into `pgvector` and expose semantic search to the AI using `Top-K` filtering.
 - Implemented a **Time Engine** (`TimeAgentService`) giving the AI real-world clock awareness for relative queries (e.g. "tomorrow").
 - Registered AI tools (`@Tool`) pointing to the domain microservices via `HttpServiceProxyFactory`.
+- Engineered a **Redis Caching Layer** using Spring's `@EnableCaching` and `@Cacheable`. The `@GetExchange` HTTP clients now aggressively cache downstream microservice JSON responses to eliminate redundant network calls and save massive compute overhead during Agentic Loops.
 
 ### 2. `mcp-travel` (Travel Tool Server)
 - Exposed the `/api/flights/search` API.
