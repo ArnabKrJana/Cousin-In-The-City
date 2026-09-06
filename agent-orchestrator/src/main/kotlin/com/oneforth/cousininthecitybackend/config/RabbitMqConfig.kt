@@ -1,10 +1,11 @@
 package com.oneforth.cousininthecitybackend.config
 
 import org.springframework.amqp.core.*
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
-import org.springframework.amqp.support.converter.MessageConverter
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 
 @Configuration
 class RabbitMqConfig {
@@ -20,8 +21,9 @@ class RabbitMqConfig {
     }
 
     @Bean
-    fun jsonMessageConverter(): MessageConverter {
-        return Jackson2JsonMessageConverter()
+    fun jsonMessageConverter(): JacksonJsonMessageConverter {
+        val jsonMapper = jacksonObjectMapper() as JsonMapper
+        return JacksonJsonMessageConverter(jsonMapper)
     }
 
     // Dead Letter Infrastructure
