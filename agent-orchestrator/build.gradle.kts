@@ -40,6 +40,9 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-amqp")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    
+    // Resilience & Fault Tolerance
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 
     // Docker Compose
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")

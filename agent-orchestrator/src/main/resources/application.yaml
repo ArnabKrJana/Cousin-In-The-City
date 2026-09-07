@@ -38,6 +38,24 @@ spring:
     redis:
       time-to-live-hours: ${REDIS_CACHE_TTL_HOURS:24}
 
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 3
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 15s
+        failureRateThreshold: 50
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 2s
+
   ai:
     ollama:
       base-url: http://localhost:11434
