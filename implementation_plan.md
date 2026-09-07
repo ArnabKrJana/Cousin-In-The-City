@@ -44,13 +44,14 @@ graph TD
     Agent <-->|HTTP Client Caching| Redis[(Redis)]
     Agent <-->|Async Tasks| MQ[[RabbitMQ]]
     Agent <-->|Local AI (llama3.2:3b)| Ollama[Host Ollama]
+    Agent <-->|Fault Tolerance| R4J{Resilience4j<br>Circuit Breaker}
     MQ -.->|Notification Consumer| FCM[Firebase Cloud Messaging]
     
-    %% Domain Microservices
-    Agent <-->|Declarative HTTP Clients| MCP_Travel[Travel Service]
-    Agent <-->|Declarative HTTP Clients| MCP_Accomm[Accommodation Service]
-    Agent <-->|Declarative HTTP Clients| MCP_Finance[Finance Service]
-    Agent <-->|Declarative HTTP Clients| MCP_Location[Location Service]
+    %% Domain Microservices (Protected by Circuit Breaker)
+    R4J <-->|Declarative HTTP Clients| MCP_Travel[Travel Service]
+    R4J <-->|Declarative HTTP Clients| MCP_Accomm[Accommodation Service]
+    R4J <-->|Declarative HTTP Clients| MCP_Finance[Finance Service]
+    R4J <-->|Declarative HTTP Clients| MCP_Location[Location Service]
 ```
 
 ## 5. Tech Stack & Design Decisions
