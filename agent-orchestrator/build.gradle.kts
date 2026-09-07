@@ -39,6 +39,7 @@ dependencies {
 
     implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-amqp")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // Docker Compose
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")

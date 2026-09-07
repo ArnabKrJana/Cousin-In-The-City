@@ -15,6 +15,9 @@
 - Implemented a **Time Engine** (`TimeAgentService`) giving the AI real-world clock awareness for relative queries (e.g. "tomorrow").
 - Engineered a **Redis Caching Layer** using Spring's `@EnableCaching` and `@Cacheable`. The `@GetExchange` HTTP clients now aggressively cache downstream microservice JSON responses to eliminate redundant network calls and save massive compute overhead during Agentic Loops.
 - Built a **RabbitMQ Message Broker** (`RabbitMqConfig`) with a Dead Letter Queue to safely queue outbound FCM (Firebase Cloud Messaging) Push Notifications triggered by the `PriceTrackerJob` scheduler.
+- Integrated **OpenAPI (Swagger UI)** (`springdoc-openapi`) to document all exposed Android REST endpoints automatically.
+- Designed a **Global Exception Handler** (`@RestControllerAdvice`) utilizing Kotlin Extension Functions to cleanly map runtime errors into strict `ApiErrorResponse` JSON payloads.
+- Parameterized Redis Cache TTL via `application-prod.yaml` and implemented `data.sql` with `create-drop` DDL to ensure clean dummy user data on every local boot.
 
 ### 2. `mcp-travel` (Travel Tool Server)
 - Exposed the `/api/flights/search` API.

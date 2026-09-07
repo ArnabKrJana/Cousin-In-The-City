@@ -1,0 +1,5 @@
+spring:
+  # Redis Caching Configuration
+  cache:
+    redis:
+      time-to-live-hours: ${REDIS_CACHE_TTL_HOURS:24}

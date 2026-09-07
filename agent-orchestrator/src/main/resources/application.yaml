@@ -14,12 +14,29 @@ spring:
     password: password
     driver-class-name: org.postgresql.Driver
 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  sql:
+    init:
+      mode: always
+
   # RabbitMQ Connection
   rabbitmq:
     host: localhost
     port: 5672
     username: myuser
     password: secret
+    
+  # Redis Caching Configuration
+  cache:
+    redis:
+      time-to-live-hours: ${REDIS_CACHE_TTL_HOURS:24}
 
   ai:
     ollama:
