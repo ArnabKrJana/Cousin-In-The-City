@@ -5,7 +5,7 @@ spring:
   docker:
     compose:
       file: ../compose.yaml
-      lifecycle-management: start-only # Ensure it doesn't shut down DBs for other modules
+      lifecycle-management: start-only
 
   # Postgres Connection
   datasource:
@@ -38,24 +38,6 @@ spring:
     redis:
       time-to-live-hours: ${REDIS_CACHE_TTL_HOURS:24}
 
-# Resilience4j Configuration
-resilience4j:
-  circuitbreaker:
-    configs:
-      default:
-        registerHealthIndicator: true
-        slidingWindowSize: 5
-        minimumNumberOfCalls: 3
-        permittedNumberOfCallsInHalfOpenState: 2
-        automaticTransitionFromOpenToHalfOpenEnabled: true
-        waitDurationInOpenState: 15s
-        failureRateThreshold: 50
-  retry:
-    configs:
-      default:
-        maxAttempts: 3
-        waitDuration: 2s
-
   ai:
     ollama:
       base-url: http://localhost:11434
@@ -78,6 +60,24 @@ resilience4j:
         initialize-schema: true
         dimensions: 768
         index-type: HNSW
+
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 3
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 15s
+        failureRateThreshold: 50
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 2s
 
 logging:
   level:
