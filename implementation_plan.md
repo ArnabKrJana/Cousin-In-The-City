@@ -116,11 +116,13 @@ graph TD
 In my project, my servers (`mcp-travel`, `mcp-finance`) are **not** using the literal JSON-RPC Anthropic protocol. Instead, they are standard REST-based Spring Boot microservices. 
 **However, I named them 'mcp-' because they perfectly implement the exact architectural *concept* and *pattern* of the Model Context Protocol.** In an MCP architecture, the AI Host (my Agent Orchestrator) knows nothing about the outside world. It relies entirely on external, modular Tool Servers to provide context. My REST microservices act as these isolated Tool Providers. By exposing them via Spring AI's `@Tool` annotations, the LLM discovers and calls them dynamically, mirroring the exact decentralized philosophy of MCP without being locked into Anthropic's specific JSON-RPC spec."
 
-### Q16: During Android integration, the AI occasionally printed raw JSON function calls (e.g., `{"name": "searchFlights"}`) to the user instead of triggering the Calendar intent. How did you fix this?
-**Answer:** "This was a complex Prompt Engineering challenge caused by using a highly quantized local model (`llama3.2:3b`). Initially, my System Prompt instructed the AI to append a custom JSON block to trigger Android intents. However, Spring AI's internal tool-calling architecture *also* relies on injecting JSON schemas into the prompt. The 3B model got overwhelmed by the conflicting JSON instructions and started hallucinating, leaking its internal tool-calling parameters into the chat UI.
-To solve this permanently, I did two things:
-1. **Prompt Externalization:** I removed the massive hardcoded prompt from the `@Bean` config and externalized it into a dedicated `system-prompt.st` file, injected dynamically via Spring's `Resource`. This dramatically improved code readability and allowed for cleaner prompt formatting.
-2. **XML over JSON:** I completely abandoned JSON for the Android triggers. I instructed the AI to output **XML Tags** instead (e.g., `<INTENT type="CALENDAR" title="Flight" />`). Because XML is syntactically distinct from Spring AI's internal JSON tool schema, the LLM stopped confusing the two paradigms. The Android app now safely intercepts the XML using regex, guaranteeing zero tool-call leakage to the user."
+### Q16: During Android integration, how do you trigger hardware Intents without leaking JSON to the user?
+**Answer:** "This evolved significantly. Initially, I instructed the AI to append raw XML tags (e.g., `<INTENT type="CALENDAR" />`) to the end of a conversational string, which the Android app parsed via Regex. This worked, but it was fragile and coupled presentation with logic. 
+Ultimately, I refactored the Backend to use **Spring AI Structured Output** via `BeanOutputConverter`. I defined a strict Kotlin DTO:
+```kotlin
+data class AgentResponse(val message: String, val intentType: String?, val actionData: Map<String, String>?)
+```
+Spring AI automatically injects this JSON schema into the LLM's prompt. Now, the LLM returns perfectly structured JSON. The Android app parses it using Retrofit, displays the `message` field in the chat UI, and silently consumes the `intentType` and `actionData` to trigger native hardware APIs. This mirrors how native system-level AI (like Samsung Galaxy AI and Android AICore) routes structured App Actions, completely decoupling the UI from the execution layer."
 
 ## Resilience4j: Theory & Concepts (Quick Reference)
 Since fault-tolerance is a critical enterprise pattern, here are the core Resilience4j concepts used in this project:

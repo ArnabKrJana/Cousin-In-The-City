@@ -10,6 +10,8 @@ import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
 
+import com.fasterxml.jackson.annotation.JsonPropertyDescription
+
 @RestController
 @RequestMapping("/api/chat")
 class ChatController(
@@ -20,7 +22,18 @@ class ChatController(
 ) {
 
     data class ChatInput(val prompt: String, val conversationId: String = "default-user")
-    data class ChatOutput(val content: String)
+    
+    data class AgentResponse(
+        @field:JsonPropertyDescription("The friendly conversational response to the user.")
+        val message: String,
+        
+        @field:JsonPropertyDescription("The Android Intent to trigger. Can be CALENDAR, MAP, or KEEP. Null if no intent is requested.")
+        val intentType: String? = null,
+        
+        @field:JsonPropertyDescription("Data for the intent. e.g. 'title' and 'date' for CALENDAR, 'location' for MAP.")
+        val actionData: Map<String, String>? = null
+    )
+    
     data class MessageDto(val role: String, val content: String)
 
     private val memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build()
@@ -56,22 +69,26 @@ class ChatController(
 
     // 5. Send a Chat Message
     @PostMapping
-    fun chat(@RequestBody input: ChatInput): ChatOutput {
+    fun chat(@RequestBody input: ChatInput): AgentResponse {
         // Update the thread's updatedAt timestamp
         threadRepository.findById(input.conversationId).ifPresent { thread ->
             thread.updatedAt = LocalDateTime.now()
             threadRepository.save(thread)
         }
 
-        val response = chatClient.prompt()
-            .user(input.prompt)
-            .advisors(memoryAdvisor)
-            .advisors { a -> 
-                a.param("chat_memory_conversation_id", input.conversationId) 
-            }
-            .call()
-            .content() ?: "I'm sorry, I couldn't process that."
-            
-        return ChatOutput(response)
+        return try {
+            chatClient.prompt()
+                .user(input.prompt)
+                .advisors(memoryAdvisor)
+                .advisors { a -> 
+                    a.param("chat_memory_conversation_id", input.conversationId) 
+                }
+                .call()
+                .entity(AgentResponse::class.java) 
+                ?: AgentResponse("Sorry, I could not process that.", null, null)
+        } catch (e: Exception) {
+            // Fallback if structured output fails
+            AgentResponse("Error processing request: ${e.message}", null, null)
+        }
     }
 }
