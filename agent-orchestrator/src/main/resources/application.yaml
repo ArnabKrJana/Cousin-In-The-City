@@ -43,8 +43,11 @@ spring:
       base-url: http://localhost:11434
       chat:
         options:
-          model: llama3.2:3b
-          temperature: 0.1
+          model: gemma4:e2b
+          temperature: 1
+          top-k: 64
+          top-p: 0.95
+          num-ctx: 8192
       embedding:
         options:
           model: nomic-embed-text:latest
