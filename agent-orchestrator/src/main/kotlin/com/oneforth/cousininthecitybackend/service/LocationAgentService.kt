@@ -2,6 +2,7 @@ package com.oneforth.cousininthecitybackend.service
 
 import com.oneforth.cousininthecitybackend.client.LocationApiClient
 import com.oneforth.cousininthecitybackend.model.dtos.TransitRouteResponse
+import com.oneforth.cousininthecitybackend.model.dtos.WeatherResponse
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
 import io.github.resilience4j.retry.annotation.Retry
 import org.slf4j.LoggerFactory
@@ -21,6 +22,18 @@ class LocationAgentService(private val client: LocationApiClient) {
 
     fun fallbackLocation(city: String, originArea: String, destinationArea: String, t: Throwable): TransitRouteResponse? {
         logger.error("Location Service failed or circuit open. Returning null. Error: ${t.message}")
+        return null
+    }
+
+    @Tool(description = "Get current weather conditions for a specific location.")
+    @CircuitBreaker(name = "locationService", fallbackMethod = "fallbackWeather")
+    @Retry(name = "locationService", fallbackMethod = "fallbackWeather")
+    fun getWeather(location: String): WeatherResponse? {
+        return client.getWeather(location)
+    }
+
+    fun fallbackWeather(location: String, t: Throwable): WeatherResponse? {
+        logger.error("Weather Service failed or circuit open. Returning null. Error: ${t.message}")
         return null
     }
 }

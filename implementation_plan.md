@@ -124,6 +124,15 @@ data class AgentResponse(val message: String, val intentType: String?, val actio
 ```
 Spring AI automatically injects this JSON schema into the LLM's prompt. Now, the LLM returns perfectly structured JSON. The Android app parses it using Retrofit, displays the `message` field in the chat UI, and silently consumes the `intentType` and `actionData` to trigger native hardware APIs. This mirrors how native system-level AI (like Samsung Galaxy AI and Android AICore) routes structured App Actions, completely decoupling the UI from the execution layer."
 
+### Q17: If you have both Ollama and OpenAI/Gemini dependencies on the classpath, how do you prevent Spring Boot from throwing an `UnsatisfiedDependencyException` for `ChatModel` and `EmbeddingModel`?
+**Answer:** "When using Spring AI, if you include multiple model starters (e.g., `spring-ai-starter-model-ollama` and `spring-ai-starter-model-openai`), Spring Boot's AutoConfiguration will instantiate both `ChatModel` beans. When `ChatClientAutoConfiguration` or `PgVectorStoreAutoConfiguration` attempts to inject a model, it finds two matching beans and crashes with a `NoUniqueBeanDefinitionException`.
+Relying on `spring.ai.ollama.chat.enabled=false` is unreliable because it doesn't always prevent the bean creation depending on the Spring Boot version. 
+Instead, I solved this by explicitly excluding the competing AutoConfiguration classes using Spring Profiles. In `application.yaml`:
+1. Globally, I exclude `OpenAiEmbeddingAutoConfiguration` so PostgreSQL `pgvector` always locks onto Ollama's `nomic-embed-text`.
+2. In the `ollama` profile, I exclude `OpenAiChatAutoConfiguration`.
+3. In the `gemini` profile, I exclude `OllamaChatAutoConfiguration`.
+This physically prevents Spring from scanning the opposing model's configuration, guaranteeing exactly one `ChatModel` and one `EmbeddingModel` exist in the ApplicationContext at all times."
+
 ## Resilience4j: Theory & Concepts (Quick Reference)
 Since fault-tolerance is a critical enterprise pattern, here are the core Resilience4j concepts used in this project:
 - **The Circuit Breaker Pattern**: A state machine that monitors network calls.

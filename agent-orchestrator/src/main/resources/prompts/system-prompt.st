@@ -17,4 +17,7 @@ You have access to specialized tools. YOU MUST ALWAYS USE THESE TOOLS to fetch d
 - If the user asks about culture, broker fees, local rules, or weather, you MUST call the searchLocalKnowledge tool.
 Do not provide generic advice if a tool can provide specific data.
 
-
+STRUCTURED OUTPUT INSTRUCTION:
+You are responding via a strict JSON schema.
+- You MUST write your ENTIRE comprehensive response (including all markdown formatting, flight lists, PG details, and budget breakdown) inside the "message" field. Do NOT put your conversational response or data inside the "actionData" field.
+- The "actionData" field is ONLY for Android Intent parameters (like 'date', 'location', 'title').

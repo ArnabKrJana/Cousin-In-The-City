@@ -1,13 +1,14 @@
 spring:
   application:
     name: agent-orchestrator
+  profiles:
+    active: gemini  # Default to Cloud LLM for stability (switch to 'ollama' to run locally)
 
   docker:
     compose:
       file: ../compose.yaml
       lifecycle-management: start-only
 
-  # Postgres Connection
   datasource:
     url: jdbc:postgresql://localhost:5432/vector_db?timezone=Asia/Kolkata
     username: postgres
@@ -26,31 +27,34 @@ spring:
     init:
       mode: always
 
-  # RabbitMQ Connection
   rabbitmq:
     host: localhost
     port: 5672
     username: myuser
     password: secret
     
-  # Redis Caching Configuration
   cache:
     redis:
       time-to-live-hours: ${REDIS_CACHE_TTL_HOURS:24}
 
   ai:
+    # We ALWAYS keep Ollama embedding enabled because Vector DBs break if you change models
     ollama:
       base-url: http://localhost:11434
-      chat:
-        options:
-          model: gemma4:e2b
-          temperature: 1
-          top-k: 64
-          top-p: 0.95
-          num-ctx: 8192
       embedding:
+        enabled: true
         options:
           model: nomic-embed-text:latest
+      chat:
+        enabled: false # Handled by profiles below
+        
+    # Ensure Google GenAI embeddings are completely disabled
+    google:
+      genai:
+        embedding:
+          enabled: false
+        chat:
+          enabled: false # Handled by profiles below
 
     chat:
       memory:
@@ -64,7 +68,6 @@ spring:
         dimensions: 768
         index-type: HNSW
 
-# Resilience4j Configuration
 resilience4j:
   circuitbreaker:
     configs:
@@ -85,3 +88,58 @@ resilience4j:
 logging:
   level:
     org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: DEBUG
+
+---
+# ==========================================
+# OLLAMA PROFILE (Local 4GB VRAM)
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: ollama
+  autoconfigure:
+    exclude: 
+      - org.springframework.ai.model.google.genai.autoconfigure.chat.GoogleGenAiChatAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.image.GoogleGenAiImageAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.image.GoogleGenAiImageConnectionAutoConfiguration
+  ai:
+    google:
+      genai:
+        api-key: dummy_key
+    ollama:
+      chat:
+        enabled: true
+        options:
+          model: gemma4:e2b
+          temperature: 1
+          format: json
+          top-k: 64
+          top-p: 0.95
+          num-ctx: 8192
+
+---
+# ==========================================
+# GEMINI PROFILE (Cloud 2-Million Token Context)
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: gemini
+  autoconfigure:
+    exclude: 
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.image.GoogleGenAiImageAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.image.GoogleGenAiImageConnectionAutoConfiguration
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:Enter_Your_Gemini_Key_Here}
+        chat:
+          enabled: true
+          options:
+            model: gemini-3.5-flash
+            temperature: 0.7

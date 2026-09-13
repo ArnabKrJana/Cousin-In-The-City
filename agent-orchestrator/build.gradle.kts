@@ -35,6 +35,7 @@ dependencies {
 
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-ollama")
+    implementation("org.springframework.ai:spring-ai-starter-model-google-genai")
     implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
 
     implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc")

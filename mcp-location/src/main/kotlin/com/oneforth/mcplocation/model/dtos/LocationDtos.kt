@@ -15,3 +15,10 @@ data class TransitRouteResponse(
     val recommendedRoute: RouteOption,
     val alternativeRoute: RouteOption
 )
+
+data class WeatherResponse(
+    val location: String,
+    val temperatureCelsius: Double,
+    val condition: String,
+    val humidity: Int
+)
