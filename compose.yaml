@@ -9,10 +9,26 @@ services:
       - "org.springframework.boot.service-connection=postgres"
     ports:
       - '5432:5432'
+    volumes:
+      - postgres_cousin_vol:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vector_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: 'redis:latest'
     ports:
       - '6379:6379'
+    volumes:
+      - redis_cousin_vol:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   rabbitmq:
     image: 'rabbitmq:management-alpine'
     environment:
@@ -21,3 +37,10 @@ services:
     ports:
       - '5672:5672'
       - '15672:15672'
+    volumes:
+      - rabbitmq_cousin_vol:/var/lib/rabbitmq
+
+volumes:
+  postgres_cousin_vol:
+  redis_cousin_vol:
+  rabbitmq_cousin_vol:

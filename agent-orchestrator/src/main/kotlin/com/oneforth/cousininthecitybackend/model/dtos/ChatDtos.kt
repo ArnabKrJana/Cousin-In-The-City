@@ -22,3 +22,29 @@ data class MessageDto(
     val role: String, 
     val content: String
 )
+
+data class AppUserDto(
+    val deviceId: String,
+    val createdAt: java.time.LocalDateTime
+)
+
+data class ChatThreadDto(
+    val threadId: String,
+    val deviceId: String,
+    val title: String,
+    val createdAt: java.time.LocalDateTime,
+    val updatedAt: java.time.LocalDateTime
+)
+
+fun com.oneforth.cousininthecitybackend.model.entity.AppUser.toDto() = AppUserDto(
+    deviceId = this.deviceId,
+    createdAt = this.createdAt
+)
+
+fun com.oneforth.cousininthecitybackend.model.entity.ChatThread.toDto() = ChatThreadDto(
+    threadId = this.threadId,
+    deviceId = this.deviceId,
+    title = this.title,
+    createdAt = this.createdAt,
+    updatedAt = this.updatedAt
+)

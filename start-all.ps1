@@ -24,17 +24,30 @@ Write-Host "Compiling all modules..." -ForegroundColor Yellow
 ./gradlew build -x test
 
 # 4. Start the MCP Servers (Background)
+function Stop-Port {
+    param([int]$port)
+    $proc = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    if ($proc) { Stop-Process -Id $proc.OwningProcess -Force -ErrorAction SilentlyContinue }
+}
+
+Write-Host "Cleaning up any old background processes..." -ForegroundColor DarkGray
+Stop-Port 8080
+Stop-Port 8081
+Stop-Port 8082
+Stop-Port 8083
+Stop-Port 8084
+
 Write-Host "Booting MCP Travel (Port 8081)..." -ForegroundColor Green
-Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-travel:bootRun" -NoNewWindow -PassThru
+Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-travel:bootRun" -WindowStyle Hidden
 
 Write-Host "Booting MCP Accommodation (Port 8082)..." -ForegroundColor Green
-Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-accommodation:bootRun" -NoNewWindow -PassThru
+Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-accommodation:bootRun" -WindowStyle Hidden
 
 Write-Host "Booting MCP Finance (Port 8083)..." -ForegroundColor Green
-Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-finance:bootRun" -NoNewWindow -PassThru
+Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-finance:bootRun" -WindowStyle Hidden
 
 Write-Host "Booting MCP Location (Port 8084)..." -ForegroundColor Green
-Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-location:bootRun" -NoNewWindow -PassThru
+Start-Process -FilePath "./gradlew" -ArgumentList ":mcp-location:bootRun" -WindowStyle Hidden
 
 Write-Host "Wait 15 seconds for MCP servers to boot..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 15
@@ -42,6 +55,23 @@ Start-Sleep -Seconds 15
 # 5. Start the Agent Orchestrator (Foreground)
 Write-Host "Booting Agent Orchestrator (Port 8080)..." -ForegroundColor Magenta
 Write-Host "=====================================================" -ForegroundColor White
-Write-Host "Once this boots, open your browser to: http://localhost:8080" -ForegroundColor White
+Write-Host "The backend is booting. Logs will appear below." -ForegroundColor White
 Write-Host "=====================================================" -ForegroundColor White
-./gradlew :agent-orchestrator:bootRun
+
+Start-Process -FilePath "./gradlew" -ArgumentList ":agent-orchestrator:bootRun" -NoNewWindow
+
+while ($true) {
+    Write-Host ""
+    $choice = Read-Host "Do you want to stop all servers and exit? (y/n)"
+    if ($choice -match "^[yY]$") {
+        Write-Host "Shutting down all servers..." -ForegroundColor Yellow
+        Stop-Port 8080
+        Stop-Port 8081
+        Stop-Port 8082
+        Stop-Port 8083
+        Stop-Port 8084
+        ./gradlew --stop
+        Write-Host "All servers stopped securely. Goodbye!" -ForegroundColor Green
+        break
+    }
+}
