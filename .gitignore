@@ -40,3 +40,6 @@ out/
 .kotlin
 /*.txt
 /*.py
+
+### AI Prompts ###
+*_prompt.md
