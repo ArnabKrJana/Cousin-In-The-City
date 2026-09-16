@@ -45,6 +45,9 @@ dependencies {
     // Resilience & Fault Tolerance
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 
+    // Firebase Admin SDK for Push Notifications
+    implementation("com.google.firebase:firebase-admin:9.4.1")
+
     // Docker Compose
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     developmentOnly("org.springframework.ai:spring-ai-spring-boot-docker-compose")
@@ -73,3 +76,4 @@ allOpen {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+

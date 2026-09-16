@@ -15,6 +15,12 @@ class ChatController(
         return chatService.registerUser(deviceId)
     }
 
+    @PutMapping("/users/{deviceId}/fcm-token")
+    fun updateFcmToken(@PathVariable deviceId: String, @RequestParam token: String): org.springframework.http.ResponseEntity<Void> {
+        chatService.updateFcmToken(deviceId, token)
+        return org.springframework.http.ResponseEntity.ok().build()
+    }
+
     @GetMapping("/users/{deviceId}/threads")
     fun getThreads(@PathVariable deviceId: String): List<ChatThreadDto> {
         return chatService.getThreads(deviceId)
@@ -41,3 +47,4 @@ class ChatController(
         return org.springframework.http.ResponseEntity.noContent().build()
     }
 }
+

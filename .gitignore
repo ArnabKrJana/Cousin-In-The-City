@@ -43,3 +43,7 @@ out/
 
 ### AI Prompts ###
 *_prompt.md
+
+### Firebase ###
+*firebase-adminsdk*.json
+firebase-admin.json

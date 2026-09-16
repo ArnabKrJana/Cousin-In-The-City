@@ -25,7 +25,8 @@ data class MessageDto(
 
 data class AppUserDto(
     val deviceId: String,
-    val createdAt: java.time.LocalDateTime
+    val createdAt: java.time.LocalDateTime,
+    val fcmToken: String?
 )
 
 data class ChatThreadDto(
@@ -38,7 +39,8 @@ data class ChatThreadDto(
 
 fun com.oneforth.cousininthecitybackend.model.entity.AppUser.toDto() = AppUserDto(
     deviceId = this.deviceId,
-    createdAt = this.createdAt
+    createdAt = this.createdAt,
+    fcmToken = this.fcmToken
 )
 
 fun com.oneforth.cousininthecitybackend.model.entity.ChatThread.toDto() = ChatThreadDto(
@@ -48,3 +50,4 @@ fun com.oneforth.cousininthecitybackend.model.entity.ChatThread.toDto() = ChatTh
     createdAt = this.createdAt,
     updatedAt = this.updatedAt
 )
+

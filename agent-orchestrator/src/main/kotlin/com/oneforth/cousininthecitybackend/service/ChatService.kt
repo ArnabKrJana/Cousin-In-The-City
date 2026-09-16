@@ -27,6 +27,13 @@ class ChatService(
         return user.toDto()
     }
 
+    fun updateFcmToken(deviceId: String, token: String) {
+        userRepository.findById(deviceId).ifPresent { user ->
+            user.fcmToken = token
+            userRepository.save(user)
+        }
+    }
+
     fun getThreads(deviceId: String): List<ChatThreadDto> {
         return threadRepository.findByDeviceIdOrderByUpdatedAtDesc(deviceId).map { it.toDto() }
     }
@@ -71,3 +78,4 @@ class ChatService(
         chatMemory.clear(threadId)
     }
 }
+

@@ -10,5 +10,7 @@ import java.time.LocalDateTime
 class AppUser(
     @Id
     val deviceId: String,
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
+    var fcmToken: String? = null
 )
+
