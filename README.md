@@ -70,5 +70,4 @@ A custom PowerShell script is provided to automatically scan for orphaned Java p
 ---
 
 ## 📖 Documentation
-* **[Implementation Plan & Technical Decisions](implementation_plan.md)**: Deep dive into the system design, tech stack choices, and interview Q&A.
 * **[Progress Tracker](progress.md)**: Detailed milestone tracking.
