@@ -25,15 +25,15 @@ graph TD
     classDef ai fill:#FF4081,stroke:#fff,stroke-width:2px,color:#fff
 
     %% Android Client
-    subgraph Android Client
+    subgraph AndroidClient ["Android Client"]
         A[Android Jetpack Compose UI]:::client
-        Room[(Room SQLite DB)]:::client
+        Room[("Room SQLite DB")]:::client
         B[Firebase Messaging Service]:::client
         Intent[Native Android Intents<br>Maps, Calendar, Keep]:::client
     end
 
     %% Spring Boot Backend
-    subgraph Spring Boot Backend (Agent Orchestrator)
+    subgraph Orchestrator ["Spring Boot Backend (Agent Orchestrator)"]
         C[REST Controllers]:::backend
         D[Service Layer / Business Logic]:::backend
         E[Autonomous Cron Jobs]:::backend
@@ -42,14 +42,14 @@ graph TD
     end
 
     %% Infrastructure
-    subgraph Infrastructure
-        H[(PostgreSQL - Users/Threads)]:::database
-        I[(Redis - Chat Memory)]:::database
+    subgraph Infra ["Infrastructure"]
+        H[("PostgreSQL - Users/Threads")]:::database
+        I[("Redis - Chat Memory")]:::database
         J[RabbitMQ Message Broker]:::broker
     end
 
     %% External Services
-    subgraph External APIs & Services
+    subgraph External ["External APIs & Services"]
         K[Google Gemini LLM]:::ai
         L[Firebase Cloud Messaging]:::external
         M[MCP Microservices<br>Travel, Map, Weather]:::external
@@ -100,3 +100,4 @@ The central nervous system of the backend, built using Enterprise Clean Architec
 * **Google Gemini:** The core foundational model powering the autonomous decision-making and natural language parsing.
 * **Model Context Protocol (MCP) Services:** Isolated domain microservices (`mcp-travel`, `mcp-location`, `mcp-finance`) that expose strict APIs. The LLM acts as an orchestrator, deciding which MCP service has the data needed to answer the user's question.
 * **Firebase Cloud Messaging (FCM):** Google's secure push notification gateway. Authenticated via the Firebase Admin SDK Service Account.
+

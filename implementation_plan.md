@@ -40,10 +40,10 @@ graph TD
     UI <-->|REST API| Agent[Agent Orchestrator<br>Spring Boot]
     
     %% Infrastructure
-    Agent <-->|Chat Threads / Embeddings| PG[(PostgreSQL + pgvector)]
-    Agent <-->|HTTP Client Caching| Redis[(Redis)]
+    Agent <-->|Chat Threads / Embeddings| PG[("PostgreSQL + pgvector")]
+    Agent <-->|HTTP Client Caching| Redis[("Redis")]
     Agent <-->|Async Tasks| MQ[[RabbitMQ]]
-    Agent <-->|Local AI (llama3.2:3b)| Ollama[Host Ollama]
+    Agent <-->|Cloud AI API| Gemini[Google Gemini Cloud]
     Agent <-->|Fault Tolerance| R4J{Resilience4j<br>Circuit Breaker}
     MQ -.->|Notification Consumer| FCM[Firebase Cloud Messaging]
     
@@ -182,3 +182,4 @@ Since fault-tolerance is a critical enterprise pattern, here are the core Resili
 
 ### Q21: Why did you implement Firebase Cloud Messaging (FCM) using an asynchronous event-driven architecture instead of standard HTTP calls?
 **Answer:** "I implemented FCM because my app isn't just a basic CRUD interface; it acts as an autonomous background agent. It runs `@Scheduled` Spring Boot cron jobs to track flight price drops, and it performs long-running AI web-scraping tasks. I needed the server to proactively wake up the user's phone when these background tasks completed. I engineered the push notification system using an event-driven architecture: the Orchestrator drops notification payloads into a RabbitMQ message broker rather than sending them synchronously. A background worker consumes this queue and executes the Firebase Admin SDK API calls, utilizing a Dead Letter Queue to catch and retry failed deliveries. This ensures the main HTTP threads are never blocked during mass notification blasts and provides fault tolerance if Google's Firebase servers experience downtime."
+
