@@ -2,6 +2,14 @@
 
 **An Autonomous, Agentic AI Travel Assistant powered by Spring Boot Microservices and Google Gemini.**
 
+📱 **Android Client Repository:** [Cousin-In-The-City-Android](https://github.com/ArnabKrJana/Cousin-In-The-City-Android)
+
+🎥 **Working Demo Video:** [Watch on YouTube](https://youtu.be/uh3yX3Bqu-w)
+<br>
+<a href="https://youtu.be/uh3yX3Bqu-w" target="_blank">
+  <img src="https://img.youtube.com/vi/uh3yX3Bqu-w/maxresdefault.jpg" alt="Working Demo Video" width="600"/>
+</a>
+
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.3+-blue.svg)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1+-brightgreen.svg)
 ![Spring AI](https://img.shields.io/badge/Spring_AI-2.0+-green.svg)
@@ -71,3 +79,4 @@ A custom PowerShell script is provided to automatically scan for orphaned Java p
 
 ## 📖 Documentation
 * **[Progress Tracker](progress.md)**: Detailed milestone tracking.
+
